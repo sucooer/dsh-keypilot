@@ -69,6 +69,7 @@ It registers as a **first-level section in the system settings sidebar** (the hi
 | **Usage report** | Per day / provider / key: requests, tokens, estimated cost; CSV & JSON export; expired buckets auto-trimmed |
 | **Webhook alerts** | Telegram / Discord / Slack or any HTTP endpoint; bounded queue + 5s aggregation + exponential backoff on failure |
 | **Settings panel** | First-level section in the system Settings sidebar: pool health, key states, cooldown countdowns, live event stream |
+| **Key entry in the panel** | Type a reference name + paste the secret in a pool; it is written to the host credential store through the public `credentials.set` interface, and never logged |
 | **Security** | Only credential *references* are stored; secret-looking values are rejected; Fail-Closed loopback/same-origin bridge |
 
 ---
@@ -145,26 +146,33 @@ keypilot:
 Configuration holds **references only** (e.g. `SENSENOVA_API_KEY`). Real values stay in the
 host credential store (`%APPDATA%\dsh-desktop\harness\.credentials.yaml` on the desktop app).
 
-**You enter a key in the host's Settings → Models page, not in this plugin's panel:**
+There are two ways to enter a key.
+
+**① The host's Settings → Models page** — the host's own entry point:
 
 ![Host settings: the "模型" (Models) entry in the sidebar is where keys are entered](docs/host-credentials.png)
 
-Adding or editing a model provider there stores the value in the credential store and derives
-the reference name automatically:
+Adding or editing a model provider there stores the value and derives the reference name
+automatically:
 
 ```
 <PROVIDER, upper-cased, non-alphanumerics → underscores>_API_KEY    # sensenova → SENSENOVA_API_KEY
 ```
 
-Put **that same name** into the plugin's Key pools — the field there says "reference only".
+Put **that same name** into the plugin's Key pools to take over its resolution.
 
-To run **several keys** per provider (the prerequisite for rotation), just add more references
-in the pool, e.g. `SENSENOVA_API_KEY_2`. The host UI has no entry for those extra names, so
-they have to be added to the credentials file by hand — copy the shape of an existing record,
-whose `secret` field holds the value.
+**② "Save a key directly", inside the plugin's Key pools** — type a reference name, paste the
+secret, click *Save & add to pool*. The value goes to the host credential store through the
+public `credentials.set` interface; the plugin config still keeps the reference name only, and
+no plaintext lands in it.
 
-Pasting a secret **itself** into the plugin's config is **rejected**: it would write plaintext
-to the plugin's config file while the user believes they only typed a name.
+② exists because the host's Models page has **exactly one key field per provider**, while
+rotation needs several. Add `SENSENOVA_API_KEY_2`, `_3`, … right there instead of editing the
+credentials file by hand.
+
+(Both the pool's reference field and the name field of ② accept **names only**: pasting a
+secret is rejected — otherwise plaintext would end up in the plugin's config file while the
+user believes they only typed a name.)
 
 ---
 
