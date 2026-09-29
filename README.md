@@ -142,10 +142,29 @@ keypilot:
 
 ### Where the secrets live
 
-Configuration holds **references only** (`DEEPSEEK_API_KEY`). Real values stay in the
-host credential store (`$DSH_HOME/.credentials.yaml` by default). Pasting a secret into
-the panel's key field is **rejected** — it would write plaintext to a config file on disk
-while the user believes they only typed a name.
+Configuration holds **references only** (e.g. `SENSENOVA_API_KEY`). Real values stay in the
+host credential store (`%APPDATA%\dsh-desktop\harness\.credentials.yaml` on the desktop app).
+
+**You enter a key in the host's Settings → Models page, not in this plugin's panel:**
+
+![Host settings: the "模型" (Models) entry in the sidebar is where keys are entered](docs/host-credentials.png)
+
+Adding or editing a model provider there stores the value in the credential store and derives
+the reference name automatically:
+
+```
+<PROVIDER, upper-cased, non-alphanumerics → underscores>_API_KEY    # sensenova → SENSENOVA_API_KEY
+```
+
+Put **that same name** into the plugin's Key pools — the field there says "reference only".
+
+To run **several keys** per provider (the prerequisite for rotation), just add more references
+in the pool, e.g. `SENSENOVA_API_KEY_2`. The host UI has no entry for those extra names, so
+they have to be added to the credentials file by hand — copy the shape of an existing record,
+whose `secret` field holds the value.
+
+Pasting a secret **itself** into the plugin's config is **rejected**: it would write plaintext
+to the plugin's config file while the user believes they only typed a name.
 
 ---
 
