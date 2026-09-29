@@ -46,6 +46,39 @@ import { openPage, sleep } from 'file:///C:/Users/anyaer/.workbuddy/skills/cdp-h
 const SHOT_PATH = process.env.KP_SHOT
   ?? resolve(dirname(fileURLToPath(import.meta.url)), '../docs/settings-panel.png')
 
+/**
+ * 界面文案可能是中文也可能是英文：面板跟随浏览器语言，而 headless Chrome 的
+ * `navigator.language` 未必和桌面端一致。断言按语言各写一份，脚本才不会因为
+ * 「这次跑出来是英文界面」这种与功能无关的原因报红。
+ */
+const TEXT = {
+  zh: {
+    section: '密钥轮换',
+    loading: '正在读取状态',
+    failed: '读取状态失败',
+    general: '调度策略',
+    catalog: '内置提供商',
+    canary: '金丝雀探测',
+    notify: 'Webhook 通知',
+    usage: '用量与成本',
+    route: '路由设置',
+    credential: '直接填密钥',
+  },
+  en: {
+    section: 'Key Rotation',
+    loading: 'Loading state',
+    failed: 'Failed to load',
+    general: 'Routing strategy',
+    catalog: 'Built-in providers',
+    canary: 'Canary probe',
+    notify: 'Webhook notifications',
+    usage: 'Usage & cost',
+    route: 'Route',
+    credential: 'Save a key directly',
+  },
+}
+let L = (process.env.KP_LANG ?? 'zh') === 'en' ? TEXT.en : TEXT.zh
+
 const URL = process.env.KP_URL
 if (URL === undefined || URL.length === 0) {
   console.error('缺少 KP_URL（形如 http://127.0.0.1:PORT/?token=...）')
@@ -127,24 +160,32 @@ await sleep(3000)
 await clickAria('收起侧边栏')
 await sleep(1500)
 
-const clicked = await clickText('密钥轮换')
+// 面板跟随浏览器语言，未必就是 KP_LANG 指定的那个 —— 以页面实际文案再校正一次，
+// 否则会因为「这次跑出来是英文界面」而误报成「分区没注册」。
+const bodyProbe = await page.evalJs(`JSON.stringify(document.body.textContent || '')`)
+if (!bodyProbe.includes(L.section)) L = L === TEXT.zh ? TEXT.en : TEXT.zh
+
+const clicked = await clickText(L.section)
 if (clicked === 'missing') {
-  console.error('设置面板里找不到「密钥轮换」分区 —— 说明客户端没有注册成功')
+  console.error(`设置面板里找不到「${L.section}」分区 —— 说明客户端没有注册成功`)
   process.exit(1)
 }
 
 // 等分区取到数据并渲染（首帧是加载态，需要等 fetch 回来）
 await sleep(SECTION_SETTLE_MS)
 
+// 文案来自 L，得拼进页面上下文里，所以用 new RegExp 而不是正则字面量。
+const has = (needle) => `new RegExp(${JSON.stringify(needle)}).test(document.body.textContent || '')`
 const state = JSON.parse(await page.evalJs(`JSON.stringify({
-  loading: /正在读取状态/.test(document.body.textContent || ''),
-  loadFailed: /读取状态失败/.test(document.body.textContent || ''),
-  general: /调度策略/.test(document.body.textContent || ''),
-  catalog: /内置提供商/.test(document.body.textContent || ''),
-  canary: /金丝雀探测/.test(document.body.textContent || ''),
-  notify: /Webhook 通知/.test(document.body.textContent || ''),
-  usage: /用量与成本/.test(document.body.textContent || ''),
-  route: /路由设置/.test(document.body.textContent || ''),
+  loading: ${has(L.loading)},
+  loadFailed: ${has(L.failed)},
+  general: ${has(L.general)},
+  catalog: ${has(L.catalog)},
+  canary: ${has(L.canary)},
+  notify: ${has(L.notify)},
+  usage: ${has(L.usage)},
+  route: ${has(L.route)},
+  credential: ${has(L.credential)},
 })`))
 
 const crashes = page.errors().filter((line) => /slot entry crashed|TypeError|Spread syntax/.test(line))
@@ -154,17 +195,22 @@ try {
   const { dirname } = await import('node:path')
   mkdirSync(dirname(SHOT_PATH), { recursive: true })
   // 面板很长，默认截图只拍到顶部。要验证某一块（如池子里的「路由设置」）时，
-  // 用 KP_FOCUS=<文案> 先把它滚到视口中央再拍。
-  const focusText = process.env.KP_FOCUS
-  if (typeof focusText === 'string' && focusText.length > 0) {
+  // 用 KP_FOCUS=<文案> 先把它滚到视口中央再拍。文案可以用 `|` 给多个候选，
+  // 这样同一份命令在中英两种界面下都能用。
+  const focusCandidates = (process.env.KP_FOCUS ?? '')
+    .split('|')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+  if (focusCandidates.length > 0) {
     const scrolled = await page.evalJs(`(() => {
+      const wanted = ${JSON.stringify(focusCandidates)}
       const target = [...document.querySelectorAll('*')].find((el) =>
-        el.children.length === 0 && (el.textContent || '').trim() === ${JSON.stringify(focusText)})
+        el.children.length === 0 && wanted.includes((el.textContent || '').trim()))
       if (!target) return 'missing'
       target.scrollIntoView({ block: 'center' })
       return 'scrolled'
     })()`)
-    console.log('聚焦：', focusText, '→', scrolled)
+    console.log('聚焦：', focusCandidates.join(' | '), '→', scrolled)
     await sleep(800)
   }
   await page.shot(SHOT_PATH)

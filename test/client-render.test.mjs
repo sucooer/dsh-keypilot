@@ -206,3 +206,76 @@ test('locale 词典中英两套的键集合一致', { skip: require === undefine
   assert.deepEqual(missingInZh, [], `中文词典缺少这些键: ${missingInZh.join(', ')}`)
   assert.ok(zhKeys.length > 80, `词典规模异常（${zhKeys.length} 条）`)
 })
+
+/**
+ * 渲染「直接填密钥」表单。
+ *
+ * 这个组件是刻意做成**纯的**（不吃 hook、只吃 props）——面板主体靠 useEffect 取数，
+ * 服务端渲染只能到加载态为止，覆盖不到「有数据时这一块长什么样」。而历史教训正是
+ * 「只在某个数据分支里崩」，所以这条路径必须能单独测。
+ *
+ * `t` 传恒等函数：渲染结果里出现的就是词典键名，断言不必跟着界面语言走。
+ */
+function renderCredentialForm(module, credentials, draft) {
+  const React = require('react')
+  const ReactDOMServer = require('react-dom/server')
+  return ReactDOMServer.renderToStaticMarkup(React.createElement(module.__CredentialForm, {
+    t: (key) => key,
+    pool: { provider: 'sensenova' },
+    credentials,
+    busy: false,
+    draft: draft ?? {},
+    onPatch: () => {},
+    onSubmit: () => {},
+  }))
+}
+
+test('「直接填密钥」表单：宿主不可写时整块不渲染', { skip: require === undefined }, () => {
+  const React = require('react')
+  const module = loadClientModule((name) => {
+    if (name === 'react') return React
+    throw new Error(`未预期的 require: ${name}`)
+  })
+
+  assert.equal(typeof module.__CredentialForm, 'function', 'client.js 应导出 __CredentialForm 供渲染测试')
+  assert.equal(renderCredentialForm(module, undefined), '', '拿不到宿主能力时不该渲染任何东西')
+  assert.equal(
+    renderCredentialForm(module, { writable: false, suggestedRefs: {} }),
+    '',
+    '明确不可写时同样不渲染——别让用户填完才发现写不进去',
+  )
+})
+
+test('「直接填密钥」表单：可写时渲染出预填名、密码框与提交按钮', { skip: require === undefined }, () => {
+  const React = require('react')
+  const module = loadClientModule((name) => {
+    if (name === 'react') return React
+    throw new Error(`未预期的 require: ${name}`)
+  })
+
+  const html = renderCredentialForm(module, {
+    writable: true,
+    suggestedRefs: { sensenova: 'SENSENOVA_API_KEY_2' },
+  })
+
+  assert.match(html, /keypilot\.credentialSection/, '应当有区块标题')
+  assert.match(html, /SENSENOVA_API_KEY_2/, '应当预填推荐的下一个可用引用名')
+  assert.match(html, /type="password"/, '密钥值必须是密码框（屏幕上不回显）')
+  assert.match(html, /keypilot\.credentialSave/, '应当有提交按钮')
+})
+
+test('「直接填密钥」表单：草稿里有名字时以草稿为准', { skip: require === undefined }, () => {
+  const React = require('react')
+  const module = loadClientModule((name) => {
+    if (name === 'react') return React
+    throw new Error(`未预期的 require: ${name}`)
+  })
+
+  const html = renderCredentialForm(
+    module,
+    { writable: true, suggestedRefs: { sensenova: 'SENSENOVA_API_KEY_2' } },
+    { ref: 'MY_OWN_NAME' },
+  )
+  assert.match(html, /MY_OWN_NAME/, '用户改过的名字不该被建议值覆盖')
+  assert.doesNotMatch(html, /SENSENOVA_API_KEY_2/, '建议值应当让位给草稿')
+})

@@ -9,6 +9,7 @@
  */
 
 import './core-route-schema.test.mjs'
+import './core-credential-input.test.mjs'
 import './core-pool.test.mjs'
 import './core-token-bucket.test.mjs'
 import './core-concurrency.test.mjs'
@@ -25,3 +26,6 @@ import './runtime-probe-notifier.test.mjs'
 import './runtime-state.test.mjs'
 import './runtime-config.test.mjs'
 import './runtime-http-bridge.test.mjs'
+// 客户端渲染测试依赖宿主提供的 react；拿不到时整组 skip（不会变红），
+// 所以可以安心放进主入口——这样「一条命令跑全部」是真的全部。
+import './client-render.test.mjs'

@@ -124,6 +124,7 @@ if (typeof clientPath === 'string' && existsSync(join(ROOT, clientPath))) {
 for (const relative of [
   'lib/core/index.js',
   'lib/core/provider-catalog.js',
+  'lib/core/credential-input.js',
   'lib/core/route-schema.js',
   'lib/core/pool.js',
   'lib/core/classify.js',
@@ -170,6 +171,17 @@ check('主机入口接入了 Webhook 队列', readText('lib/index.js').includes(
   // 「接受写死的默认值」一个选项，而预设一定会过期（服务商改端点、模型上下架）。
   check('客户端含池子内的路由设置区', readText('lib/client.js').includes('keypilot.routeSection'))
   check('路由设置能写回配置', readText('lib/client.js').includes('writeRoute'))
+  // 「直接填密钥」：表单 + 主机端的写入动作。
+  check('客户端含「直接填密钥」表单', readText('lib/client.js').includes('keypilot.credentialSection'))
+  check('客户端用实时回写的输入框', readText('lib/client.js').includes('function LiveField'),
+    '提交按钮要读草稿，用失焦回写的 TextField 会读到按下前的旧值')
+  check('主机端提供 set-credential 动作', readText('lib/index.js').includes("action === 'set-credential'"))
+
+// 安全回归锁：密钥值只能交给宿主的凭据服务，绝不能被写进日志。
+// 这条不变式靠人记住是记不住的 —— 哪天有人在失败分支里顺手 log 一下 payload 就破了。
+check('set-credential 的密钥值不进日志',
+  !/logger\.[a-z]+\([^)]*secretCheck/.test(readText('lib/index.js')),
+  '日志里绝不能出现用户粘进来的密钥值')
 
 // 回归锁：被 `...` 展开成 children 的列表必须保证是数组。
 // 曾经写在「池子为空」分支里直接返回单个元素，导致宿主报
