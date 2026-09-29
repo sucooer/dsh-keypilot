@@ -1,0 +1,85 @@
+{
+  "name": "@sucooer/dsh-keypilot",
+  "version": "0.1.0",
+  "description": "Enterprise-grade transparent API key rotation, predictive rate-limit guard and cross-provider failover engine for DeepSeek Harness. Ships a first-level settings section with a built-in provider catalog and declarative custom-provider routes.",
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "bundle",
+    "api-key",
+    "rotation",
+    "failover",
+    "rate-limit",
+    "quota",
+    "circuit-breaker"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sucooer/dsh-keypilot.git"
+  },
+  "homepage": "https://github.com/sucooer/dsh-keypilot",
+  "bugs": {
+    "url": "https://github.com/sucooer/dsh-keypilot/issues"
+  },
+  "type": "module",
+  "icon": "icon.svg",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/client.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./core": {
+      "default": "./lib/core/index.js"
+    },
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml"
+  },
+  "files": [
+    "lib",
+    "docs",
+    "cordis.patch.yml",
+    "icon.svg",
+    "README.md",
+    "README.zh.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "engines": {
+      "dsh": ">=0.1.7-rc.2"
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    }
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": ">=4.0.1",
+    "@deepseek-ai/schemastery": ">=3.18.1",
+    "@deepseek-ai/dsh-llm": ">=0.1.7-rc.2"
+  },
+  "scripts": {
+    "test": "node --test test/run.mjs",
+    "verify": "node tools/verify.mjs",
+    "pack": "npm pack --pack-destination .",
+    "deploy": "node tools/deploy-local.mjs",
+    "deploy:web": "node tools/deploy-local.mjs --profile web"
+  }
+}

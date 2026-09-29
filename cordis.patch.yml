@@ -1,0 +1,11 @@
+# dsh-keypilot bundle layer.
+#
+# Inserts this plugin's loader row into the profile. The single row mounts both
+# halves: the host half (credential-resolve interception, llm/stream rotation,
+# declared custom-provider routes, the loopback-fenced settings bridge) and the
+# browser half (lib/client.js, which seats a first-level settings section).
+#
+# Install: dsh plugin --profile <name> add link:<path-to-this-repo>
+- insert:
+    - id: keypilot
+      name: '@sucooer/dsh-keypilot'

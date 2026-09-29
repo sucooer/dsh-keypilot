@@ -1,0 +1,8 @@
+# 统一用 LF：这个仓库只含 JS / Markdown / YAML，跨平台（Windows 开发、
+# Linux CI）都按 LF 存，避免 git 反复报告 "LF will be replaced by CRLF"。
+* text=auto eol=lf
+
+# 二进制文件不要做任何行尾转换
+*.png binary
+*.tgz binary
+*.ico binary

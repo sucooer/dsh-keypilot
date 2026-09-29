@@ -1,0 +1,12 @@
+node_modules/
+
+# 打包产物（发布走 npm，不进版本库）
+*.tgz
+
+# 开发期临时文件：构建/测试日志、部署脚本产物
+*.log
+.tmp-*
+*.bak
+
+.DS_Store
+Thumbs.db
