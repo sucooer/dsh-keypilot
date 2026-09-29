@@ -108,7 +108,7 @@ test('findCatalogProvider / isCatalogProvider 行为一致', () => {
 test('目录覆盖用户最关心的几类服务商', () => {
   const ids = new Set(BUILTIN_PROVIDERS.map((p) => p.id))
   // 这些是国内/国际最常用的几类，缺失会让「内置提供商」这个功能名不副实。
-  for (const required of ['deepseek', 'openai', 'anthropic', 'google', 'moonshot', 'zhipu', 'openrouter', 'ollama']) {
+  for (const required of ['deepseek', 'openai', 'anthropic', 'google', 'moonshot', 'zhipu', 'openrouter', 'ollama', 'sensenova', 'nvidia']) {
     assert.ok(ids.has(required), `目录缺少常用服务商：${required}`)
   }
 })
@@ -124,4 +124,36 @@ test('模型建议值不含空白项且已去重', () => {
       seen.add(model)
     }
   }
+})
+
+test('Responses 协议的端点不能自带 /responses 后缀', () => {
+  // 适配器在 baseURL 之后拼 `/responses`。把服务商给的完整端点
+  // （形如 https://host/v1/responses）整个填进 baseURL，最终会请求
+  // `.../v1/responses/responses` —— 而这种错误只在真正发请求时才以 404 暴露。
+  for (const provider of BUILTIN_PROVIDERS) {
+    if (provider.api !== 'openai-responses') continue
+    assert.equal(
+      /\/responses\/?$/.test(provider.baseURL),
+      false,
+      `${provider.id} 的 baseURL 不应以 /responses 结尾（会与适配器拼接的路径重复）`,
+    )
+  }
+})
+
+test('商汤日日新走 Responses API，端点停在 /v1', () => {
+  const provider = findCatalogProvider('sensenova')
+  assert.ok(provider, '目录应含商汤日日新')
+  assert.equal(provider.baseURL, 'https://token.sensenova.cn/v1')
+  assert.equal(provider.api, 'openai-responses')
+})
+
+test('NVIDIA NIM 指向官方 integrate 端点', () => {
+  const provider = findCatalogProvider('nvidia')
+  assert.ok(provider, '目录应含 NVIDIA NIM')
+  assert.equal(provider.baseURL, 'https://integrate.api.nvidia.com/v1')
+  assert.equal(provider.api, 'openai-completions')
+  assert.equal(provider.group, '聚合网关')
+  // 实测该端点的 /models 无密钥即回 200，探活不能用来判断密钥有效性。
+  assert.equal(provider.unauthenticatedProbe, true,
+    'NVIDIA NIM 的模型列表公开可读，必须标记 unauthenticatedProbe，否则探活会把坏密钥放回池子')
 })

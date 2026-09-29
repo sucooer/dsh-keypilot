@@ -62,7 +62,7 @@ It registers as a **first-level section in the system settings sidebar** (the hi
 | **Graded backoff** | Exponential for hard failures (capped ×8), flat short cooldown for soft ones, ±12.5% jitter, penalty decay |
 | **Circuit breaker** | Fail fast after consecutive failures; half-open probes auto-recover |
 | **Cross-provider cascade** | Declared fallback chain with depth and cycle guards |
-| **Provider catalog** | 30+ presets (DeepSeek, OpenAI, Anthropic, Gemini, Moonshot, Zhipu, Qwen, Ark, OpenRouter, Ollama, …) |
+| **Provider catalog** | ~30 presets (DeepSeek, OpenAI, Anthropic, Gemini, Moonshot, Zhipu, Qwen, Ark, SenseNova, NVIDIA NIM, OpenRouter, Ollama, …) |
 | **Custom providers** | Declarative registration of a real pi-ai model route for gateways the host does not serve |
 | **Quota windows** | UTC / Pacific (DST-aware) / local midnight / rolling 24h |
 | **Canary probe** | One free `/models` request to cooling keys: success returns them early, still-limited ones keep waiting, auth failures get quarantined |

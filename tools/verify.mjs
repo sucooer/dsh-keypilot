@@ -18,6 +18,8 @@ import { readFileSync, existsSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { PROTOCOLS } from '../lib/core/provider-catalog.js'
+
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 /** @type {string[]} */
@@ -148,6 +150,15 @@ for (const relative of [
 // 截图进 README 了，就得保证它同时进了 npm 包，否则发布后图片 404。
 check('package.json 的 files 含 docs（README 截图随包发布）',
   JSON.parse(readText('package.json')).files.includes('docs'))
+
+// 浏览器端是自包含模块（只能向宿主 require，不能 import core），协议列表没法派生，
+// 只能各写一份 —— 那就必须断言两处一致，否则将来加了新协议，界面上根本选不到。
+{
+  const clientSource = readText('lib/client.js')
+  const missing = PROTOCOLS.filter((protocol) => !clientSource.includes(`'${protocol}'`))
+  check('客户端协议下拉覆盖 core 的全部 PROTOCOLS', missing.length === 0,
+    `客户端缺少：${missing.join(', ')}`)
+}
 
 check('主机入口注册了用量报表路由', readText('lib/index.js').includes('BRIDGE_USAGE_PATH'))
 check('主机入口接入了金丝雀探测', readText('lib/index.js').includes('runProbeSweep'))

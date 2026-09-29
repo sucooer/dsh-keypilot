@@ -16,6 +16,7 @@ import {
   normalizeProtocol,
   normalizeRoute,
   normalizeRouteId,
+  withCatalogRoutes,
   checkProtocolAvailability,
 } from '../lib/core/index.js'
 
@@ -178,6 +179,46 @@ test('collectRoutes 对 providers 非数组返回空结果且不抛出', () => {
     assert.equal(routes.size, 0)
     assert.equal(errors.size, 0)
   }
+})
+
+test('withCatalogRoutes 只为「目录内 + 宿主不认识」的条目补出路由', () => {
+  const providers = [
+    { provider: 'nvidia', keys: ['NVIDIA_API_KEY'] },
+    { provider: 'deepseek', keys: ['D'] },
+    { provider: 'my-gw', keys: ['K'] },
+    { provider: 'sensenova', keys: ['S'], route: { id: 'sensenova', baseURL: 'https://x.example.com/v1', models: ['m'] } },
+  ]
+  const result = withCatalogRoutes(providers, (id) => id === 'deepseek')
+
+  // 目录内 + 宿主不认识 → 补
+  assert.deepEqual(result[0].route, { id: 'nvidia' })
+  // 目录内但宿主已经认识 → 绝不能重复注册，会顶掉宿主自己的实现
+  assert.equal(result[1].route, undefined)
+  // 不在目录里 → 由用户显式声明，不猜
+  assert.equal(result[2].route, undefined)
+  // 已有显式声明 → 原样保留
+  assert.equal(result[3].route.baseURL, 'https://x.example.com/v1')
+
+  // 纯函数：不修改入参
+  assert.equal(providers[0].route, undefined)
+})
+
+test('withCatalogRoutes 判定「宿主认不认识」时抛错 → 保守跳过注册', () => {
+  const result = withCatalogRoutes([{ provider: 'nvidia', keys: [] }], () => {
+    throw new Error('providerInfo 不可用')
+  })
+  assert.equal(result[0].route, undefined, '宁可少注册，也不能冒顶掉宿主实现的风险')
+})
+
+test('withCatalogRoutes 补出的路由能直接通过 collectRoutes 校验', () => {
+  // 这条链路对应真实场景：配置里只写了 provider + keys，插件照样能把
+  // 宿主不认识的提供商注册成可用路由。
+  const providers = withCatalogRoutes([{ provider: 'nvidia', keys: ['K'] }], () => false)
+  const { routes, errors } = collectRoutes(providers)
+  assert.equal(errors.size, 0)
+  assert.deepEqual([...routes.keys()], ['nvidia'])
+  assert.equal(routes.get('nvidia').baseURL, 'https://integrate.api.nvidia.com/v1')
+  assert.ok(routes.get('nvidia').models.length > 0, '模型列表应从目录一并补出')
 })
 
 test('collectRoutes 记录校验失败的路由而不是抛出', () => {

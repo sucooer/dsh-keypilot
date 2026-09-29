@@ -91,6 +91,31 @@ test('探测成功只减一档失败计数，而不是清零', () => {
   assert.equal(verdict.decayFailures, 1, '一次探活不足以证明完全健康')
 })
 
+test('无鉴权端点的探活成功：放回池子，但不减免失败计数', () => {
+  // 实测 NVIDIA NIM 的 `GET /v1/models` 无密钥也返回 200，那种 200 只能证明
+  // 「服务可达」，证明不了「这把密钥还有效」。
+  const verdict = judgeProbe({
+    status: 200,
+    currentCooldownMs: 60_000,
+    probeAuthenticated: false,
+  })
+  assert.equal(verdict.action, 'release', '探活的主要收益（提前归队）不能丢')
+  assert.equal(verdict.cooldownMs, 0)
+  assert.equal(verdict.decayFailures, 0, '不能因为一次无鉴权的 200 就减免失败计数')
+  assert.match(verdict.reason, /无需鉴权/)
+
+  // 同样的 200，在有鉴权的端点上应当减一档。
+  assert.equal(judgeProbe({ status: 200, currentCooldownMs: 60_000 }).decayFailures, 1)
+})
+
+test('鉴权失败的判定不受 probeAuthenticated 影响', () => {
+  // 401 是端点明确拒绝这把密钥，无论探测端点本身是否鉴权，结论都成立。
+  for (const probeAuthenticated of [true, false]) {
+    const verdict = judgeProbe({ status: 401, currentCooldownMs: 60_000, probeAuthenticated })
+    assert.equal(verdict.action, 'break', `probeAuthenticated=${probeAuthenticated} 时应长期隔离`)
+  }
+})
+
 test('探测返回 401/403 → 长期隔离', () => {
   for (const status of [401, 403]) {
     const verdict = judgeProbe({ status, currentCooldownMs: 60_000, baseCooldownMs: 60_000 })
