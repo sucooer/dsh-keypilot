@@ -144,6 +144,7 @@ const state = JSON.parse(await page.evalJs(`JSON.stringify({
   canary: /金丝雀探测/.test(document.body.textContent || ''),
   notify: /Webhook 通知/.test(document.body.textContent || ''),
   usage: /用量与成本/.test(document.body.textContent || ''),
+  route: /路由设置/.test(document.body.textContent || ''),
 })`))
 
 const crashes = page.errors().filter((line) => /slot entry crashed|TypeError|Spread syntax/.test(line))
@@ -152,6 +153,20 @@ try {
   const { mkdirSync } = await import('node:fs')
   const { dirname } = await import('node:path')
   mkdirSync(dirname(SHOT_PATH), { recursive: true })
+  // 面板很长，默认截图只拍到顶部。要验证某一块（如池子里的「路由设置」）时，
+  // 用 KP_FOCUS=<文案> 先把它滚到视口中央再拍。
+  const focusText = process.env.KP_FOCUS
+  if (typeof focusText === 'string' && focusText.length > 0) {
+    const scrolled = await page.evalJs(`(() => {
+      const target = [...document.querySelectorAll('*')].find((el) =>
+        el.children.length === 0 && (el.textContent || '').trim() === ${JSON.stringify(focusText)})
+      if (!target) return 'missing'
+      target.scrollIntoView({ block: 'center' })
+      return 'scrolled'
+    })()`)
+    console.log('聚焦：', focusText, '→', scrolled)
+    await sleep(800)
+  }
   await page.shot(SHOT_PATH)
   console.log('截图：', SHOT_PATH)
 } catch (error) {

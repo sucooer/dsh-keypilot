@@ -166,6 +166,10 @@ check('主机入口接入了 Webhook 队列', readText('lib/index.js').includes(
   check('客户端含用量面板', readText('lib/client.js').includes('keypilot.sectionUsage'))
   check('客户端含通知面板', readText('lib/client.js').includes('keypilot.sectionNotify'))
   check('客户端含探测面板', readText('lib/client.js').includes('keypilot.sectionCanary'))
+  // 池子里的路由设置区：端点 / 协议 / 模型必须能改。没有它，「点预设」就只剩
+  // 「接受写死的默认值」一个选项，而预设一定会过期（服务商改端点、模型上下架）。
+  check('客户端含池子内的路由设置区', readText('lib/client.js').includes('keypilot.routeSection'))
+  check('路由设置能写回配置', readText('lib/client.js').includes('writeRoute'))
 
 // 回归锁：被 `...` 展开成 children 的列表必须保证是数组。
 // 曾经写在「池子为空」分支里直接返回单个元素，导致宿主报
