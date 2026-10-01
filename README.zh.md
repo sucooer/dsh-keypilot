@@ -87,7 +87,7 @@ dsh-keypilot 在**凭据解析**这一处换手：请求发出去之前由密钥
 在桌面端的插件管理器里填仓库地址，或用命令行：
 
 ```bash
-dsh plugin --profile desktop add github:sucooer/dsh-keypilot#v0.1.1
+dsh plugin --profile desktop add github:sucooer/dsh-keypilot#v0.1.2
 ```
 
 **要带 `#tag`。** 不带 `#` 的 git 依赖会解析成「当时默认分支指向的提交」，pnpm 随后把那个
@@ -105,7 +105,7 @@ git ls-remote --tags https://github.com/sucooer/dsh-keypilot.git
 跟 profile 的 `pnpm-lock.yaml` 里这个包记的提交对一下，或直接看你当初钉的 tag。要升级：
 
 ```bash
-dsh plugin --profile desktop add github:sucooer/dsh-keypilot#v0.1.1
+dsh plugin --profile desktop add github:sucooer/dsh-keypilot#v0.1.3
 ```
 
 **新版本号只有换成一个新的 tag 名才会生效。** pnpm 对 git tag 只解析一次并按解析出的提交
