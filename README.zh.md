@@ -78,7 +78,40 @@ dsh-keypilot 在**凭据解析**这一处换手：请求发出去之前由密钥
 
 ## 安装
 
-### DSH Desktop
+本插件只通过 GitHub 分发，没有发布到 npm。
+
+### 从 GitHub 安装（推荐）
+
+在桌面端的插件管理器里填仓库地址，或用命令行：
+
+```bash
+dsh plugin --profile desktop add github:sucooer/dsh-keypilot#v0.1.0
+```
+
+**要带 `#tag`。** 不带 `#` 的 git 依赖会解析成「当时默认分支指向的提交」，pnpm 随后把那个
+**提交哈希**写进 `pnpm-lock.yaml`：之后 `main` 上再推多少提交都不会到你手上，也无从判断自己
+装的是哪一版。
+
+### 升级
+
+查远端有哪些版本：
+
+```bash
+git ls-remote --tags https://github.com/sucooer/dsh-keypilot.git
+```
+
+跟 profile 的 `pnpm-lock.yaml` 里这个包记的提交对一下，或直接看你当初钉的 tag。要升级：
+
+```bash
+dsh plugin --profile desktop add github:sucooer/dsh-keypilot#v0.1.1
+```
+
+**新版本号只有换成一个新的 tag 名才会生效。** pnpm 对 git tag 只解析一次并按解析出的提交
+缓存，所以「复用同一个 tag」和「只改 `package.json` 里的 `version` 而不打 tag」都会让你停在
+旧代码上。每一版都发一个全新的 `vX.Y.Z` tag，永远不移动已有 tag。装完要**完整退出并重开
+DSH** —— 插件在宿主进程启动时加载。
+
+### DSH Desktop（本机）
 
 桌面版的 `desktop` profile 由 Electron 应用独占管理，请通过应用内的**插件管理器 / 插件市场**
 安装，或在桌面端的插件页面里选择「从本地目录安装」并指向本仓库根目录。
@@ -295,6 +328,23 @@ puppeteer/playwright）。
 声明路由的模型列表被当成对象处理（设置里存的是纯 ID 字符串），于是每条模型的 `id`/`name`
 都是 `undefined`，整条路由的模型目录一起加载失败；流内 `finish.error` 那条切换分支漏记了
 另外两条分支都记的字段，于是正在冷却的密钥显示成「原因不明」——而 429 走的恰恰是这条分支。
+
+---
+
+## 发布
+
+只通过 GitHub 分发，一条命令发一版：
+
+```bash
+npm run release                      # 打 v<package.json version>、推送、建 Release
+npm run release -- --notes notes.md  # 用手写的发布说明
+npm run release -- --dry-run         # 只打印要做什么，不改动任何东西
+```
+
+`tools/release.mjs` 会在三种情况下拒绝执行：工作区不干净、tag 已存在、版本号没有严格递增
+—— 因为这三种失败在用户那边都是**静默**的。**tag 只创建、永不移动**：pnpm 对 git tag 只解析
+一次并按解析出的提交缓存，所以移动过的 `v0.1.0` 谁也升级不到；而只改 `version` 不打新 tag
+则等于什么都没发出去。记得同时建 Release —— 「有没有新版」在 GitHub 上只有那里一眼可见。
 
 ---
 

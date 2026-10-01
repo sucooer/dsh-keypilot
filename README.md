@@ -76,7 +76,42 @@ It registers as a **first-level section in the system settings sidebar** (the hi
 
 ## Install
 
-### DSH Desktop
+This plugin is distributed through GitHub only — it is not published to npm.
+
+### From GitHub (recommended)
+
+Paste the repository address into the in-app plugin manager, or from a CLI:
+
+```bash
+dsh plugin --profile desktop add github:sucooer/dsh-keypilot#v0.1.0
+```
+
+Pin the tag: a git spec without `#` resolves to whatever the default branch happened to
+point at, and pnpm then locks that **commit hash** into `pnpm-lock.yaml`. New commits on
+`main` will never reach you, and there is no way to say which version you are on.
+
+### Upgrading
+
+Check what exists:
+
+```bash
+git ls-remote --tags https://github.com/sucooer/dsh-keypilot.git
+```
+
+Compare against the commit recorded for this package in the profile's
+`pnpm-lock.yaml`, or just look at the tag you pinned. To move:
+
+```bash
+dsh plugin --profile desktop add github:sucooer/dsh-keypilot#v0.1.1
+```
+
+**A new version number only takes effect through a new tag name.** pnpm resolves a git
+tag once and caches it by the resolved commit, so re-using a tag, or bumping `version`
+in `package.json` without tagging, both leave you on the old code. Each release gets a
+fresh `vX.Y.Z` tag, never a moved one. Fully quit and reopen DSH afterwards — plugins
+load at host startup.
+
+### DSH Desktop (this machine)
 
 The `desktop` profile is owned exclusively by the Electron application. Install through
 the in-app plugin manager / marketplace, or point its "install from local directory" at
@@ -290,6 +325,25 @@ model list being treated as objects when settings hold plain id strings, which m
 model's `id`/`name` `undefined` and killed the whole route's catalog; and the in-stream
 `finish.error` switch path skipping the two accounting fields the other switch paths set,
 which left a cooling key showing as "reason unknown" — on the path a 429 most often takes.
+
+---
+
+## Releasing
+
+Distribution is GitHub-only. One command cuts a release:
+
+```bash
+npm run release                      # tags v<package.json version>, pushes it, opens a Release
+npm run release -- --notes notes.md  # use hand-written release notes
+npm run release -- --dry-run         # print the plan, change nothing
+```
+
+`tools/release.mjs` refuses to run unless the working tree is clean, the tag does not
+already exist, and the version moved strictly forward — because both failure modes are
+silent on the user's side. **A tag is only ever created, never moved**: pnpm resolves a
+git tag once and caches the resolved commit, so a moved `v0.1.0` upgrades nobody, and a
+`version` bump with no new tag ships nothing. Create a Release as well, since that is
+where "is there a newer version?" is answerable at a glance.
 
 ---
 
