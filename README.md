@@ -85,7 +85,7 @@ This plugin is distributed through GitHub only — it is not published to npm.
 Paste the repository address into the in-app plugin manager, or from a CLI:
 
 ```bash
-dsh plugin --profile desktop add github:sucooer/dsh-keypilot#v0.1.2
+dsh plugin --profile desktop add github:sucooer/dsh-keypilot#v0.1.3
 ```
 
 Pin the tag: a git spec without `#` resolves to whatever the default branch happened to
@@ -104,7 +104,7 @@ Compare against the commit recorded for this package in the profile's
 `pnpm-lock.yaml`, or just look at the tag you pinned. To move:
 
 ```bash
-dsh plugin --profile desktop add github:sucooer/dsh-keypilot#v0.1.3
+dsh plugin --profile desktop add github:sucooer/dsh-keypilot#v0.1.4
 ```
 
 **A new version number only takes effect through a new tag name.** pnpm resolves a git
