@@ -119,12 +119,20 @@ test('同源 Origin 的写请求被信任', () => {
   assert.equal(verdict.trusted, true)
 })
 
-test('改变状态的方法缺少 Origin 时被拒绝', () => {
+test('改变状态的方法缺少 Origin 时被信任（桌面壳 dsh-app:// 转发会删掉该头）', () => {
   for (const method of ['PUT', 'POST', 'DELETE', 'PATCH']) {
     const verdict = checkBridgeRequest(makeReq({ method, headers: { host: '127.0.0.1:3080' } }))
-    assert.equal(verdict.trusted, false, `${method} 无 Origin 应被拒绝`)
-    assert.match(verdict.reason, /缺少 Origin/)
+    assert.equal(verdict.trusted, true, `${method} 无 Origin 应放行——环回 + Host 已是全部判据`)
   }
+})
+
+test('环回但 Host 不是环回的写请求仍然被拒（DNS rebinding）', () => {
+  const verdict = checkBridgeRequest(makeReq({
+    method: 'PUT',
+    headers: { host: 'evil.example.com:3080' },
+  }))
+  assert.equal(verdict.trusted, false)
+  assert.match(verdict.reason, /Host .* 未解析到环回地址/)
 })
 
 test('读方法缺少 Origin 是允许的（浏览器同源 GET 本就不发该头）', () => {
@@ -141,7 +149,7 @@ test('Origin 为畸形 URL 时被拒绝', () => {
   assert.equal(verdict.trusted, false)
 })
 
-test('Origin 为 "null"（沙箱 iframe）时按缺少 Origin 处理', () => {
+test('Origin 为 "null"（不透明来源）时与缺少 Origin 同样处理', () => {
   const read = checkBridgeRequest(makeReq({
     headers: { host: '127.0.0.1:3080', origin: 'null' },
   }))
@@ -151,7 +159,7 @@ test('Origin 为 "null"（沙箱 iframe）时按缺少 Origin 处理', () => {
     method: 'PUT',
     headers: { host: '127.0.0.1:3080', origin: 'null' },
   }))
-  assert.equal(write.trusted, false, '写请求仍然要求真实来源')
+  assert.equal(write.trusted, true, '桌面壳转发路径上写请求也会带 null')
 })
 
 // ── 处理器行为 ──────────────────────────────────────────────────────────────
