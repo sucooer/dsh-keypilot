@@ -25,14 +25,11 @@
   "type": "module",
   "icon": "icon.svg",
   "main": "lib/index.js",
-  "types": "lib/index.d.ts",
   "exports": {
     ".": {
-      "types": "./lib/index.d.ts",
       "default": "./lib/index.js"
     },
     "./client": {
-      "types": "./lib/client.d.ts",
       "default": "./lib/client.js"
     },
     "./core": {
@@ -44,6 +41,7 @@
   "files": [
     "lib",
     "docs",
+    "tools",
     "cordis.patch.yml",
     "icon.svg",
     "README.md",
@@ -76,8 +74,10 @@
     "@deepseek-ai/dsh-llm": ">=0.1.7-rc.2"
   },
   "scripts": {
+    "setup": "node tools/link-host-modules.mjs",
     "test": "node --test test/run.mjs",
     "verify": "node tools/verify.mjs",
+    "verify:route": "node tools/verify-declared-route.mjs",
     "pack": "npm pack --pack-destination .",
     "deploy": "node tools/deploy-local.mjs",
     "deploy:web": "node tools/deploy-local.mjs --profile web"

@@ -226,9 +226,53 @@ lib/index.js         host 装配    lib/client.js  设置面板（浏览器端�
 ## 测试
 
 ```bash
-node --test test/run.mjs      # 349 个用例
-node tools/verify.mjs         # 打包自检（63 项）
+node --test test/run.mjs      # 387 个用例
+node tools/verify.mjs         # 打包自检（74 项）
 ```
+
+单元测试**刻意不加载宿主模块**（要能在任何机器上跑），因此它钉住的是「我们的形状」，
+而不是「宿主收不收这个形状」。这条缝隙由单独的脚本把关：
+
+```bash
+npm run setup -- --dsh-root "<DSH 安装目录>"   # 只需一次；node_modules 不进版本库
+npm run verify:route                          # 走真实的宿主接缝
+```
+
+它用真实的 `PiAiAdapter` 与 `pi-ai` 装配每条声明路由，再套用宿主自己的目录校验
+（`dsh-llm` → `LlmRuntime.listModels`）。之所以需要它：这里的形状不对，失败发生在
+**模型目录层而不是请求层**——提供商在选择器里直接显示
+`加载失败: adapter returned invalid or duplicate model metadata`，密钥池再满也救不回来。
+
+另一条缝隙是：网关**列出**的模型，不等于**你的账号能调用**。目录里的模型 ID 只是
+起步建议，因此要拿真请求去验：
+
+```bash
+node tools/check-provider-models.mjs --provider nvidia        # 推理 + 工具调用
+node tools/check-provider-models.mjs --provider nvidia --all  # 扫 /models 列出的全部
+```
+
+NVIDIA NIM 上这两者差得离谱：端点列出 81 个模型，某个账号能调的只有十来个，而且
+其余的一部分**根本不报错——直接挂住不响应**。挂住是最糟的级联目标：没有可分类的
+错误，回合会一直卡到流空闲超时。
+
+第三条缝隙是**浏览器端**，单测够不到：它跑在宿主的模块加载器里。历史上真出过一次
+只在浏览器里发作的崩溃——空池分支把数组写成了单个元素，`...poolCards` 展开时抛
+`Spread syntax requires ...iterable[Symbol.iterator] to be a function`，宿主记成
+`slot entry crashed in 'settings.section'` 并渲染空白。所以这一半要拿真浏览器去点：
+
+```bash
+dsh --profile web --port 34573 --no-open                    # 日志里会打印 ?token=...
+chrome --headless=new --remote-debugging-port=9222 --no-first-run \
+       --user-data-dir="<每次新开的临时目录>" about:blank
+CDP_HOST=127.0.0.1 KP_URL="http://127.0.0.1:34573/?token=..." \
+  node tools/check-settings-section.mjs
+```
+
+它打开真实界面、点进分区，断言四件事：分区内容出现了、没有崩溃、控制台没有异常、
+fetch 能通。`KP_FOCUS` 可以先把某一块滚到视口中央再拍，截图落在
+`docs/settings-panel.png`——本 README 里的图就是这么来的。它用的 CDP 脚手架是
+`tools/lib/cdp.mjs`，随仓库走（Node 22+ 自带全局 `WebSocket`，不需要
+puppeteer/playwright）。
 
 覆盖重点：
 
@@ -247,7 +291,10 @@ node tools/verify.mjs         # 打包自检（63 项）
 
 测试抓出并修掉的真实缺陷（节选）：熔断器用 `openedAt === 0` 当哨兵导致时钟起点为 0 时状态失效；
 `Retry-After` 被本地退避上限截断导致冷却未到就再撞一次；面板上改的全局设置被宿主配置盖掉；
-轮询指针用过滤后数组下标导致重试时跳着选；`warnings` 诊断混进配置对象被一起落盘。
+轮询指针用过滤后数组下标导致重试时跳着选；`warnings` 诊断混进配置对象被一起落盘；
+声明路由的模型列表被当成对象处理（设置里存的是纯 ID 字符串），于是每条模型的 `id`/`name`
+都是 `undefined`，整条路由的模型目录一起加载失败；流内 `finish.error` 那条切换分支漏记了
+另外两条分支都记的字段，于是正在冷却的密钥显示成「原因不明」——而 429 走的恰恰是这条分支。
 
 ---
 

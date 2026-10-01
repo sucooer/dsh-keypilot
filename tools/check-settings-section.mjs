@@ -35,7 +35,7 @@
 
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { openPage, sleep } from 'file:///C:/Users/anyaer/.workbuddy/skills/cdp-headless-visual-verify/cdp-lib.mjs'
+import { openPage, sleep } from './lib/cdp.mjs'
 
 /**
  * 截图落地路径：失败时的画面比任何日志都直观，所以成功/失败都要存。
@@ -89,7 +89,7 @@ const URL_LOAD_TIMEOUT = 60_000
 const SECTION_SETTLE_MS = 20_000
 
 /**
- * 视口：cdp-lib 的默认值是 390x844（移动端），而宿主在窄视口下会把设置面板
+ * 视口：cdp.mjs 的默认值是 390x844（移动端），而宿主在窄视口下会把设置面板
  * 压成「左列表 + 极窄右内容」，截出来的图完全不是用户看到的样子。
  * 默认取桌面尺寸，可用 KP_VIEWPORT=1440x960 覆盖。
  */

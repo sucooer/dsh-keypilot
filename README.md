@@ -224,9 +224,58 @@ The split means **decision logic is testable without a DSH host**, and only
 ## Tests
 
 ```bash
-node --test test/run.mjs      # 349 cases
-node tools/verify.mjs         # packaging self-check (63 checks)
+node --test test/run.mjs      # 387 cases
+node tools/verify.mjs         # packaging self-check (74 checks)
 ```
+
+Unit tests deliberately load **no host modules** — they must run anywhere — so they pin
+*our* shapes, not *the host's* acceptance of them. That gap has its own check:
+
+```bash
+npm run setup -- --dsh-root "<DSH install dir>"   # once; node_modules is gitignored
+npm run verify:route                              # replays the real host seam
+```
+
+It builds each declared route with the real `PiAiAdapter` and `pi-ai`, then applies the
+host's own catalog validation (`dsh-llm` → `LlmRuntime.listModels`). It exists because a
+shape mismatch there fails *at the model-catalog layer*, not at request time: the provider
+shows up in the picker as `加载失败: adapter returned invalid or duplicate model metadata`
+and no key pool can rescue it.
+
+A second gap is that a model **listed** by a gateway is not necessarily one **your account
+can call**. The catalog's model ids are a starting suggestion, so they get verified against
+the live endpoint:
+
+```bash
+node tools/check-provider-models.mjs --provider nvidia        # inference + tool calling
+node tools/check-provider-models.mjs --provider nvidia --all  # sweep everything /models lists
+```
+
+On NVIDIA NIM the two are wildly different: the endpoint advertises 81 models, a given
+account can call about ten, and some of the rest do not error at all — they **hang without
+responding**. A hanging model is the worst kind of cascade target: nothing to classify, and
+the turn stalls until the stream idle timeout.
+
+A third gap is the **browser half**, which no unit test can reach: it runs inside the host's
+module loader. It has produced a real crash that only ever fired in the browser (an empty-pool
+branch building an array as a single element, so `...poolCards` threw
+`Spread syntax requires ...iterable[Symbol.iterator] to be a function`; the host logged
+`slot entry crashed in 'settings.section'` and rendered a blank panel). So it gets driven for
+real, in a headless browser:
+
+```bash
+dsh --profile web --port 34573 --no-open                    # prints ?token=... in the log
+chrome --headless=new --remote-debugging-port=9222 --no-first-run \
+       --user-data-dir="<fresh temp dir>" about:blank
+CDP_HOST=127.0.0.1 KP_URL="http://127.0.0.1:34573/?token=..." \
+  node tools/check-settings-section.mjs
+```
+
+It opens the real UI, clicks into the section, and asserts that the content rendered, nothing
+crashed, the console is clean and `fetch` returned. `KP_FOCUS` scrolls a given block into view
+first, and the screenshot lands in `docs/settings-panel.png` — that is how the images in this
+README are produced. The CDP helper it uses is `tools/lib/cdp.mjs`, vendored in this repo
+(Node 22+ global `WebSocket`; no puppeteer/playwright).
 
 Coverage focus: route validation, pool selection, backoff/circuit-breaker state machine,
 failure classification matrix (including CJK error text), DST-correct quota windows,
@@ -236,7 +285,11 @@ config priority semantics.
 Real defects these tests caught and fixed: a circuit breaker using `openedAt === 0` as its
 sentinel (state collapsed when the monotonic clock started at 0); `Retry-After` being
 clamped by the local backoff ceiling (re-hitting upstream before the cooldown expired);
-panel edits to global settings being overridden by the host config.
+panel edits to global settings being overridden by the host config; a declared route's
+model list being treated as objects when settings hold plain id strings, which made every
+model's `id`/`name` `undefined` and killed the whole route's catalog; and the in-stream
+`finish.error` switch path skipping the two accounting fields the other switch paths set,
+which left a cooling key showing as "reason unknown" — on the path a 429 most often takes.
 
 ---
 
