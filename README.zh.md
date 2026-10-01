@@ -85,7 +85,7 @@ dsh-keypilot 在**凭据解析**这一处换手：请求发出去之前由密钥
 在桌面端的插件管理器里填仓库地址，或用命令行：
 
 ```bash
-dsh plugin --profile desktop add github:sucooer/dsh-keypilot#v0.1.0
+dsh plugin --profile desktop add github:sucooer/dsh-keypilot#v0.1.1
 ```
 
 **要带 `#tag`。** 不带 `#` 的 git 依赖会解析成「当时默认分支指向的提交」，pnpm 随后把那个

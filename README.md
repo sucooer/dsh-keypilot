@@ -83,7 +83,7 @@ This plugin is distributed through GitHub only — it is not published to npm.
 Paste the repository address into the in-app plugin manager, or from a CLI:
 
 ```bash
-dsh plugin --profile desktop add github:sucooer/dsh-keypilot#v0.1.0
+dsh plugin --profile desktop add github:sucooer/dsh-keypilot#v0.1.1
 ```
 
 Pin the tag: a git spec without `#` resolves to whatever the default branch happened to
