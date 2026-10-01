@@ -157,3 +157,23 @@ test('NVIDIA NIM 指向官方 integrate 端点', () => {
   assert.equal(provider.unauthenticatedProbe, true,
     'NVIDIA NIM 的模型列表公开可读，必须标记 unauthenticatedProbe，否则探活会把坏密钥放回池子')
 })
+
+test('NVIDIA NIM 的模型 ID 一律带 vendor 前缀', () => {
+  // NIM 的模型 ID 形如 `vendor/model`，少写前缀会被端点当成未知路由。
+  // 这里钉住形状：目录是「一键加入」的入口，一个不带前缀的 ID 就是一次坏回合。
+  const provider = findCatalogProvider('nvidia')
+  for (const model of provider.models) {
+    assert.match(model, /^[^/\s]+\/[^/\s]+$/, `NVIDIA 模型 "${model}" 必须是 vendor/model 形状`)
+  }
+  assert.ok(provider.models.length >= 1, '目录至少要给一个可用模型，否则「一键加入」加入了个空池子')
+})
+
+test('目录模型的挑选判据写在 nvidia 条目的注释里（别再照抄 /models）', () => {
+  // 这不是在钉文案，而是在钉一条会反复踩的教训：该端点列出 81 个模型，
+  // 但某个账号实际能用的只有十来个——其余要么回 `404 … Not found for account`，
+  // 要么**挂住不响应**。曾经目录里就躺着三个「挂住」的模型。
+  // 判据必须留在代码旁边，否则下一个人还会照着 /models 抄一遍。
+  const provider = findCatalogProvider('nvidia')
+  assert.match(provider.note, /挂住|不响应/, 'nvidia 的 note 必须提醒「部分模型挂住不响应」')
+  assert.match(provider.note, /\/models/, 'nvidia 的 note 必须点名 /models 这个陷阱')
+})

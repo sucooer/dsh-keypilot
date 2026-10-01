@@ -260,6 +260,29 @@ test('finish.error 中已经产出内容时不再重试', async () => {
   assert.equal(calls, 1, '内容已可见，不该有第二次调用')
 })
 
+test('finish.error 切换时同样记下切换次数与失败性质', async () => {
+  // 上游用 finish.error 报告限流是最常见的形态（429 尤其如此），而面板要靠
+  // switches / lastFailureKind 回答「这把密钥为什么在冷却」。曾经这条分支漏记，
+  // 于是一把正在冷却的密钥在面板上显示成「原因不明」，切换次数也少算一次。
+  const { engine, pools, makeNext } = setup()
+  const next = makeNext([
+    { chunks: errorFinishChunks('RATE_LIMIT', 'rate limited') },
+    { chunks: successChunks('ok') },
+  ])
+  await collect(engine.rotate({ provider: 'p', model: 'm' }, next))
+
+  const pool = pools.get('p')
+  const failed = pool.slots.find((slot) => slot.ref === 'A')
+  assert.equal(failed.usage.switches, 1, '应当记下一次切换')
+  assert.equal(failed.usage.lastFailureKind, 'RATE_LIMIT', '应当记下失败性质')
+  assert.ok(failed.failures > 0, '应当被罚冷却')
+
+  // 接手的第二把是成功的，不该被记成失败。
+  const healthy = pool.slots.find((slot) => slot.ref === 'B')
+  assert.equal(healthy.usage.switches, 0)
+  assert.equal(healthy.usage.lastFailureKind, '')
+})
+
 test('finish.aborted（用户中断）绝不切换', async () => {
   const { engine, makeNext, resolvedRefs } = setup()
   let calls = 0
