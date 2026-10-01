@@ -1,0 +1,27 @@
+name: CI
+
+# 这两条命令刻意不需要任何依赖：单元测试不加载宿主模块（所以它在任何机器上都能跑），
+# 自检也只读仓库自身。因此这里没有 install 步骤 —— 克隆下来直接跑，和本地完全一致。
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # 仓库声明 engines.node >= 22，这里跑下限，保证支持的最老版本真能用。
+          node-version: '22'
+      - name: Unit tests
+        run: node test/run.mjs
+      - name: Packaging self-check
+        run: node tools/verify.mjs

@@ -1,5 +1,7 @@
 # dsh-keypilot
 
+[![CI](https://github.com/sucooer/dsh-keypilot/actions/workflows/ci.yml/badge.svg)](https://github.com/sucooer/dsh-keypilot/actions/workflows/ci.yml)
+
 > 适用于 DeepSeek Harness 的企业级**无感 API 密钥轮换、预判限流与跨提供商故障转移**引擎。
 
 多把密钥自动轮换、在 429 之前就跳过已经饱和的密钥、密钥全挂时级联到备用提供商，
@@ -328,6 +330,15 @@ puppeteer/playwright）。
 声明路由的模型列表被当成对象处理（设置里存的是纯 ID 字符串），于是每条模型的 `id`/`name`
 都是 `undefined`，整条路由的模型目录一起加载失败；流内 `finish.error` 那条切换分支漏记了
 另外两条分支都记的字段，于是正在冷却的密钥显示成「原因不明」——而 429 走的恰恰是这条分支。
+
+---
+
+## 持续集成
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) 跑在 Node 22 上——`engines` 里声明的
+下限——并且**刻意没有 install 步骤**：上面那两条命令既不加载宿主模块也不依赖任何第三方包，
+所以 CI 跑的就是新克隆下来能跑的那份代码，中间没有任何环节可以掩盖「少了某个依赖」。
+将来若有人让其中一条需要 `node_modules`，CI 会直接失败，这正是想要的结果。
 
 ---
 

@@ -1,5 +1,7 @@
 # dsh-keypilot
 
+[![CI](https://github.com/sucooer/dsh-keypilot/actions/workflows/ci.yml/badge.svg)](https://github.com/sucooer/dsh-keypilot/actions/workflows/ci.yml)
+
 > Enterprise-grade **transparent API key rotation, predictive rate-limit guard and
 > cross-provider failover** for DeepSeek Harness.
 
@@ -325,6 +327,16 @@ model list being treated as objects when settings hold plain id strings, which m
 model's `id`/`name` `undefined` and killed the whole route's catalog; and the in-stream
 `finish.error` switch path skipping the two accounting fields the other switch paths set,
 which left a cooling key showing as "reason unknown" — on the path a 429 most often takes.
+
+---
+
+## Continuous integration
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on Node 22 — the floor declared
+in `engines` — and has **no install step**, on purpose: the two commands above load no host
+modules and no third-party packages, so CI runs exactly the code a fresh clone runs, with
+nothing in between to paper over a missing dependency. If a future change makes either of
+them need `node_modules`, CI breaks, which is the correct outcome.
 
 ---
 
